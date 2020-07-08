@@ -1,6 +1,6 @@
 # HPMA115S0_AirQualityMonitor
 
-# by Jelly Coding (South Korea)  
+# by Jelly Coding (South Korea)  , home: https://computer-training-school-971.business.site/
 # 2020.07.08 
 
 
