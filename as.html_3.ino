@@ -31,10 +31,28 @@ void BuiltInLed_test() {
 }
 
 
+
+
+char RxPM2dot5_L;
+char RxPM2dot5_H;
+
+
+int result=0;
+
+
+
 void setup() {
+/*
+//int([ 0000 0001 ]<<8) + [1000 0001]
+
+1 0000 0000
+
+
+INT ([ 0000 0001 ]<<8)  = 0000 0000 0000 0001  = > 0000 0001 1000 0001
+*/
 
   char i;
-  
+
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(RED_LED, OUTPUT);
@@ -61,11 +79,25 @@ void setup() {
   main_menu();
 
 }
+
+void test_typeConversion(void)
+{
+  RxPM2dot5_L = 0xE8;
+  RxPM2dot5_H = 0x03;
+
+  result = int(int(RxPM2dot5_H<<8) | RxPM2dot5_L);
+
+  Serial.print("This is type conversion test, from 2 byte to int. : ");
+  Serial.println(result);
+}
+
+
 void main_menu(void){
   current_menu = MAIN_MENU;
   Serial.println("This is Test mode. Select test Function");
   Serial.println("1: cpu test (LED heart beat)");
   Serial.println("2: sensor test");
+  Serial.println("3: typeConversion test");
   Serial.println("h: display main menu");
   
 }
@@ -76,7 +108,7 @@ void sensor_Test_menu(void){
   Serial.println("This is sensor_Test_menu. Select test Function");
   Serial.println("1: temperature sensor test");
   Serial.println("L: Red LED test");
-  Serial.println("2: return main");
+  Serial.println("2: return to main menu");
   Serial.println("h: display main menu");
 }
 
@@ -129,25 +161,79 @@ void ReadParticleSensor(void)
   
 }
 
+/// 미세먼지 대기질 표현
+#define GOOD      0
+#define NORMAL    1
+#define BAD       2
+#define WORST     3
 
+
+char airCondition =GOOD;
 
 void loop() {
 
+  int PM25_Data=0;
+  
   Packet_Ok = 0;
   ReadParticleSensor();
 
+  //sensor data processing
   if(Packet_Ok == 1)
   {
+    
+    PM25_Data=int(int(RxSensorData[6]<<8) | RxSensorData[7]); 
     Serial.print("PM2.5 Data= ");
-    Serial.println(RxSensorData[7], HEX);
+    Serial.println(PM25_Data);
+
+    Serial.print("RAW data: ");
+    for(int iii =0; iii<32; iii++){
+      Serial.print(RxSensorData[iii], HEX);
+      Serial.print(",");
+    }
+
+
+    //if(0 <= PM25_Data <=30)
+    
+    if((PM25_Data >=0) && (PM25_Data <=30)){
+      airCondition = GOOD;
+    }
+    else if((PM25_Data >=31) && (PM25_Data <=80)){
+      airCondition = NORMAL;
+    }
+    else if((PM25_Data >=81) && (PM25_Data <=120)){
+      airCondition = BAD;
+    }
+    else{
+      airCondition = WORST;
+    }
+    
+
+    switch (airCondition)
+    {
+    case GOOD: 
+        Serial.println("좋음");  
+        break;
+    case NORMAL:    
+        Serial.println("보통"); 
+        break;
+    case BAD: 
+        Serial.println("나쁨"); 
+        break;
+    case WORST:    // 4일 때 코드 실행
+        Serial.println("매우나쁨"); 
+        break;
+    default:
+        Serial.println("데이터 수신이 잘못됨\n");
+    }
+    
+   
     delay(1000);
   }
   else{
     Serial.println("data not received");
   }
  
-  
-/*
+  // Display user interface 
   if (Serial.available() > 0) {
     // read the incoming byte:
     userCommand = Serial.read();
@@ -165,6 +251,10 @@ void loop() {
         else if (userCommand == 'h')
         {
            main_menu();
+        }
+        else if (userCommand == '3')
+        {
+          test_typeConversion();
         }
     }else if(current_menu == SENSOR_TEST_MENU){
         if(userCommand == '1')
@@ -192,7 +282,7 @@ void loop() {
    
   }
     
-*/
+
   //led_test();
   //sendRequest(readpart);  
   
